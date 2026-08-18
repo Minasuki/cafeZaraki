@@ -1,6 +1,6 @@
 
-# test_connection.py (Síncrono)
-from database import get_connection
+import sys
+from ConeccionBD.database import get_connection
 
 def main():
     conn = get_connection()
