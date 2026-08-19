@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from app.api.routes import orders
+from backend.app.api.routes import orders
 
 app = FastAPI(title="Café Zaraki API")
 

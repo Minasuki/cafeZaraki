@@ -1,6 +1,5 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from app.api.routes import orders, products  # tus routers
-from app.core.database import get_connection
+from backend.app.api.routes import products, orders  # Importamos orders
 
 app = FastAPI(title="Café Zaraki API")
 
@@ -52,3 +51,7 @@ def create_order(customer_name: str, total: float):
 from app.api.routes import websocket
 
 app.include_router(websocket.router)  
+
+@app.get("/")
+def root():
+    return {"message": "Bienvenido a Café Zaraki"}
