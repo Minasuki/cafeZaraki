@@ -6,6 +6,10 @@ app = FastAPI(title="Café Zaraki API")
 # Incluir routers
 app.include_router(orders.router, prefix="/api/v1/orders", tags=["orders"])
 app.include_router(products.router, prefix="/api/v1/products", tags=["products"])
+ 
+
+
+"""
 
 # --- WebSocket para el panel del empleado ---
 # Lista para mantener conexiones activas
@@ -49,9 +53,9 @@ def create_order(customer_name: str, total: float):
     return {"message": "Orden creada y notificada"}
 
 from app.api.routes import websocket
-
 app.include_router(websocket.router)  
 
+"""
 @app.get("/")
 def root():
     return {"message": "Bienvenido a Café Zaraki"}

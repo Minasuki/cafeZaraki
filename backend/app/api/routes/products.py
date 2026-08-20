@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException
 from backend.app.database import get_connection
 from backend.app.models.product import ProductResponse
 
+
 router = APIRouter()
 
 @router.get("/", response_model=list[ProductResponse])
