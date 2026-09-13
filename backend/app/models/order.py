@@ -14,6 +14,13 @@ class OrderCreate(BaseModel):
     customer_name: str
     items: List[OrderItemCreate]  # Lista de productos en el carrito
 
+class OrderItemResponse(BaseModel):
+    id: int
+    product_id: int
+    quantity: int
+    unit_price: float
+    product_name: Optional[str] = None
+
 # Modelo para la respuesta (lo que devuelve la API)
 class OrderResponse(BaseModel):
     id: int
