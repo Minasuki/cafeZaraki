@@ -1,7 +1,8 @@
 # backend/app/api/routes/orders.py
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
+from typing import Optional
 from backend.app.database import get_connection
-from backend.app.models.order import OrderCreate, OrderResponse
+from backend.app.models.order import OrderCreate, OrderResponse,OrderItemResponse
 from datetime import datetime
 
 # Importamos la función de notificación WebSocket (la crearemos después)
@@ -10,7 +11,8 @@ from datetime import datetime
 router = APIRouter()
 
 @router.post("/", response_model=OrderResponse, status_code=201)
-def create_order(order_data: OrderCreate):
+def create_order(order_data: OrderCreate):  
+
     conn = get_connection()
     if not conn:
         raise HTTPException(status_code=500, detail="Error de conexión a la base de datos")
@@ -70,6 +72,119 @@ def create_order(order_data: OrderCreate):
         print(f"❌ Error al crear la orden: {e}")
         raise HTTPException(status_code=400, detail=f"Error al procesar la orden: {str(e)}")
     
+    finally:
+        cursor.close()
+        conn.close()
+
+@router.get("/", response_model=list[OrderResponse])
+def get_orders(status: Optional[str] = Query(None, description="Filtrar por estado: pending, preparing, ready, paid")):
+   
+    conn = get_connection()
+    if not conn:
+        raise HTTPException(status_code=500, detail="Error de conexión a la base de datos")
+    
+    cursor = conn.cursor()
+    try:
+        if status:
+            cursor.execute(
+                """
+                SELECT id, customer_name, status, total, created_at
+                FROM orders
+                WHERE status = %s
+                ORDER BY created_at ASC
+                """,
+                (status,)
+            )
+        else:
+            cursor.execute(
+                """
+                SELECT id, customer_name, status, total, created_at
+                FROM orders
+                ORDER BY created_at ASC
+                """
+            )
+        
+        rows = cursor.fetchall()
+        
+        return [
+            {
+                "id": r[0],
+                "customer_name": r[1],
+                "status": r[2],
+                "total": float(r[3]),
+                "created_at": r[4]
+            }
+            for r in rows
+        ]
+    except Exception as e:
+        print(f"❌ Error al obtener órdenes: {e}")
+        raise HTTPException(status_code=500, detail=f"Error al obtener órdenes: {str(e)}")
+    finally:
+        cursor.close()
+        conn.close()
+
+
+@router.get("/{order_id}", response_model=OrderResponse)
+def get_order_detail(order_id: int):
+    """
+    Devuelve el detalle completo de una orden, incluyendo sus ítems y el nombre del producto.
+    """
+    conn = get_connection()
+    if not conn:
+        raise HTTPException(status_code=500, detail="Error de conexión a la base de datos")
+    
+    cursor = conn.cursor()
+    try:
+        # 1. Obtener la orden principal
+        cursor.execute(
+            """
+            SELECT id, customer_name, status, total, created_at
+            FROM orders
+            WHERE id = %s
+            """,
+            (order_id,)
+        )
+        order_row = cursor.fetchone()
+        
+        if not order_row:
+            raise HTTPException(status_code=404, detail=f"Orden con id {order_id} no encontrada")
+        
+        # 2. Obtener los ítems de la orden con el nombre del producto
+        cursor.execute(
+            """
+            SELECT oi.id, oi.product_id, oi.quantity, oi.unit_price, p.name
+            FROM order_items oi
+            JOIN products p ON oi.product_id = p.id
+            WHERE oi.order_id = %s
+            """,
+            (order_id,)
+        )
+        items_rows = cursor.fetchall()
+        
+        items = [
+            {
+                "id": r[0],
+                "product_id": r[1],
+                "quantity": r[2],
+                "unit_price": float(r[3]),
+                "product_name": r[4]
+            }
+            for r in items_rows
+        ]
+        
+        return {
+            "id": order_row[0],
+            "customer_name": order_row[1],
+            "status": order_row[2],
+            "total": float(order_row[3]),
+            "created_at": order_row[4],
+            "items": items
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Error al obtener detalle de la orden: {e}")
+        raise HTTPException(status_code=500, detail=f"Error al obtener la orden: {str(e)}")
     finally:
         cursor.close()
         conn.close()
