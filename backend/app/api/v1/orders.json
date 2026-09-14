@@ -1,0 +1,6 @@
+{
+  "customer_name": "Juan Pérez",
+  "items": [
+    { "product_id": 1, "quantity": 2, "unit_price": 2.5 }
+  ]
+}
