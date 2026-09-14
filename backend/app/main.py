@@ -1,4 +1,4 @@
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI
 from backend.app.api.routes import products, orders  # Importamos orders
 
 app = FastAPI(title="Café Zaraki API")

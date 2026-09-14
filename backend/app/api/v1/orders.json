@@ -1,6 +1,10 @@
 {
-  "customer_name": "Juan Pérez",
+  "customer_name": "Diagnostico",
   "items": [
-    { "product_id": 1, "quantity": 2, "unit_price": 2.5 }
+    {
+      "product_id": 1,
+      "quantity": 1,
+      "unit_price": 2.5
+    }
   ]
 }

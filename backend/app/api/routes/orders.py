@@ -2,7 +2,7 @@
 from fastapi import APIRouter, HTTPException, Query
 from typing import Optional
 from backend.app.database import get_connection
-from backend.app.models.order import OrderCreate, OrderResponse, OrderItemResponse
+from backend.app.models.order import OrderCreate, OrderResponse
 from datetime import datetime
 
 # Importamos la función de notificación WebSocket (la crearemos después)
