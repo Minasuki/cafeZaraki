@@ -4,6 +4,7 @@ from typing import Optional
 from backend.app.database import get_connection
 from backend.app.models.order import OrderCreate, OrderResponse
 from datetime import datetime
+from pydantic import BaseModel
 
 # Importamos la función de notificación WebSocket (la crearemos después)
 # from backend.app.api.routes.websocket import notify_new_order
@@ -204,6 +205,71 @@ def get_order_detail(order_id: int):
         print(f"❌ Error al obtener detalle de la orden: {e}")
         raise HTTPException(
             status_code=500, detail=f"Error al obtener la orden: {str(e)}"
+        )
+    finally:
+        cursor.close()
+        conn.close()
+
+
+class StatusUpdate(BaseModel):
+    status: str
+
+
+@router.patch("/{order_id}/status", response_model=OrderResponse)
+def update_order_status(order_id: int, update: StatusUpdate):
+    """
+    Actualiza el estado de una orden.
+    Estados válidos: pending, preparing, ready, paid.
+    """
+    valid_statuses = {"pending", "preparing", "ready", "paid"}
+    if update.status not in valid_statuses:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Estado inválido. Debe ser uno de: {', '.join(valid_statuses)}",
+        )
+
+    conn = get_connection()
+    if not conn:
+        raise HTTPException(
+            status_code=500, detail="Error de conexión a la base de datos"
+        )
+
+    cursor = conn.cursor()
+    try:
+        # Verificar que la orden existe
+        cursor.execute("SELECT id FROM orders WHERE id = %s", (order_id,))
+        if not cursor.fetchone():
+            raise HTTPException(
+                status_code=404, detail=f"Orden {order_id} no encontrada"
+            )
+
+        # Actualizar el estado
+        cursor.execute(
+            """
+            UPDATE orders
+            SET status = %s
+            WHERE id = %s
+            RETURNING id, customer_name, status, total, created_at
+            """,
+            (update.status, order_id),
+        )
+        row = cursor.fetchone()
+        conn.commit()
+
+        return {
+            "id": row[0],
+            "customer_name": row[1],
+            "status": row[2],
+            "total": float(row[3]),
+            "created_at": row[4],
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        conn.rollback()
+        print(f"❌ Error al actualizar estado: {e}")
+        raise HTTPException(
+            status_code=500, detail=f"Error al actualizar estado: {str(e)}"
         )
     finally:
         cursor.close()
