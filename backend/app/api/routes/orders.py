@@ -3,8 +3,10 @@ from fastapi import APIRouter, HTTPException, Query
 from typing import Optional
 from backend.app.database import get_connection
 from backend.app.models.order import OrderCreate, OrderResponse
-from datetime import datetime
+from backend.app.api.routes.websocket import notify_new_order
 from pydantic import BaseModel
+import asyncio
+from backend.app.api.routes.websocket import notify_new_order
 
 # Importamos la función de notificación WebSocket (la crearemos después)
 # from backend.app.api.routes.websocket import notify_new_order
@@ -13,7 +15,7 @@ router = APIRouter()
 
 
 @router.post("/", response_model=OrderResponse, status_code=201)
-def create_order(order_data: OrderCreate):
+async def create_order(order_data: OrderCreate):
 
     conn = get_connection()
     if not conn:
@@ -53,13 +55,15 @@ def create_order(order_data: OrderCreate):
         conn.commit()
 
         # 5. (Opcional) Notificar a los empleados por WebSocket
-        # notify_new_order({
-        #     "id": order_id,
-        #     "customer_name": order_data.customer_name,
-        #     "total": total,
-        #     "status": "pending",
-        #     "created_at": created_at.isoformat()
-        # })
+        asyncio.create_task(notify_new_order (
+            {
+                "id": order_id,
+                "customer_name": order_data.customer_name,
+                "total": float(total),
+                "status": "pending",
+                "created_at": created_at.isoformat(),
+            }
+        ))
 
         # 6. Devolver la respuesta
         return OrderResponse(
@@ -109,13 +113,11 @@ def get_orders(
                 (status,),
             )
         else:
-            cursor.execute(
-                """
+            cursor.execute("""
                 SELECT id, customer_name, status, total, created_at
                 FROM orders
                 ORDER BY created_at ASC
-                """
-            )
+                """)
 
         rows = cursor.fetchall()
 
